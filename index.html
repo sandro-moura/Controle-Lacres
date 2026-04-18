@@ -918,8 +918,7 @@ function saveEntrada() {
   const date = new Date().toISOString();
   if (!bagNum || !sealStart) { alert('Preencha todos os campos obrigatórios (*)'); return; }
   const d = getData();
-  const existing = d.bags.find(b => b.bagNumber === bagNum);
-  if (existing) { alert('Já existe uma caixa com este número cadastrada.'); return; }
+  // Permite reutilizar o mesmo N° de caixa — apenas valida sobreposição de lacres
   const sealConflict = d.bags.find(b => !(sealStart > b.sealEnd || sealStart + 99 < b.sealStart));
   if (sealConflict) { alert(`Conflito de numeração com a caixa ${sealConflict.bagNumber} (${sealConflict.sealStart}–${sealConflict.sealEnd}).`); return; }
   const bag = {
