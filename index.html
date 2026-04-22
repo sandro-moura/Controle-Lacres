@@ -245,6 +245,16 @@
 </head>
 <body>
 
+<!-- ── TOAST ── -->
+<div id="toast" style="
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+  background:#222;color:#fff;padding:12px 24px;border-radius:10px;
+  font-size:14px;font-weight:600;z-index:99999;
+  box-shadow:0 4px 20px rgba(0,0,0,.3);
+  opacity:0;transition:opacity .3s;pointer-events:none;
+  max-width:90vw;text-align:center;
+"></div>
+
 <!-- ── LOADING OVERLAY ── começa escondido -->
 <div id="loading-overlay" class="hidden">
   <div class="spinner"></div>
@@ -557,11 +567,28 @@ async function api(action, data = {}) {
 //  LOADING OVERLAY
 // ============================================================
 function showLoading(msg) {
+  const el = document.getElementById('loading-overlay');
   document.getElementById('loading-msg').textContent = msg || 'Carregando...';
-  document.getElementById('loading-overlay').classList.remove('hidden');
+  el.classList.remove('hidden');
+  el.style.display = 'flex';   // garante mesmo se classe não surtir efeito
 }
 function hideLoading() {
-  document.getElementById('loading-overlay').classList.add('hidden');
+  const el = document.getElementById('loading-overlay');
+  el.classList.add('hidden');
+  el.style.display = 'none';   // belt-and-suspenders: inline style prevalece sobre CSS
+}
+
+// ============================================================
+//  TOAST (notificação flutuante)
+// ============================================================
+let _toastTimer = null;
+function showToast(msg, duration = 3500) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  if (_toastTimer) clearTimeout(_toastTimer);
+  t.textContent = msg;
+  t.style.opacity = '1';
+  _toastTimer = setTimeout(() => { t.style.opacity = '0'; }, duration);
 }
 
 // ============================================================
@@ -708,16 +735,16 @@ async function doLogin() {
       el.style.display = selectedProfile === 'lp' ? '' : 'none';
     });
 
+    // Login concluído — mostra o app
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     hideLoading();
     addAudit('LOGIN', { profile: selectedProfile });
-    nav('dashboard');
 
   } catch (err) {
+    // Erro na fase de autenticação/carregamento de dados
     hideLoading();
     btnLogin.disabled = false; btnLogin.textContent = 'Entrar →';
-    // Mensagem específica baseada no tipo de erro
     let msg = '⚠ ';
     if (err.message.startsWith('HTTP ')) {
       const code = err.message.replace('HTTP ', '');
@@ -732,6 +759,16 @@ async function doLogin() {
     errEl.textContent = msg;
     errEl.style.display = 'block';
     console.error('[Login error]', err.message);
+    return; // Aborta antes de tentar navegar
+  }
+
+  // Navegação inicial — separado do try-catch do login para erros de render
+  // não deixarem o usuário preso com overlay visível
+  try {
+    nav('dashboard');
+  } catch (e) {
+    console.error('[Dashboard render error]', e);
+    showToast('⚠️ Erro ao renderizar painel: ' + e.message + '. Tente outra seção pelo menu.');
   }
 }
 
@@ -859,28 +896,32 @@ function renderDashboard() {
   if (bags.length === 0)
     alertEl.innerHTML += `<div class="alert alert-info">ℹ️ Nenhuma caixa cadastrada ainda. Registre o primeiro recebimento em <strong>Entrada de Lacres</strong>.</div>`;
 
-  const last7 = buildWeeklyData(d);
-  if (charts.mov) charts.mov.destroy();
-  charts.mov = new Chart(document.getElementById('chart-movimentacao'), {
-    type: 'bar',
-    data: { labels: last7.labels, datasets: [
-      { label: 'Recebidos',    data: last7.recebidos,   backgroundColor: '#43a047', borderRadius: 6 },
-      { label: 'Distribuídos', data: last7.distribuidos, backgroundColor: '#1a237e', borderRadius: 6 }
-    ]},
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
-  });
+  if (typeof Chart !== 'undefined') {
+    const last7 = buildWeeklyData(d);
+    if (charts.mov) charts.mov.destroy();
+    charts.mov = new Chart(document.getElementById('chart-movimentacao'), {
+      type: 'bar',
+      data: { labels: last7.labels, datasets: [
+        { label: 'Recebidos',    data: last7.recebidos,   backgroundColor: '#43a047', borderRadius: 6 },
+        { label: 'Distribuídos', data: last7.distribuidos, backgroundColor: '#1a237e', borderRadius: 6 }
+      ]},
+      options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+    });
 
-  const s = {
-    disponível:  bags.filter(b => b.status === 'disponível').length,
-    parcial:     bags.filter(b => b.status === 'parcial').length,
-    distribuído: bags.filter(b => b.status === 'distribuído').length
-  };
-  if (charts.sac) charts.sac.destroy();
-  charts.sac = new Chart(document.getElementById('chart-sacolas'), {
-    type: 'doughnut',
-    data: { labels: ['Disponível','Parcial','Distribuído'], datasets: [{ data: [s.disponível, s.parcial, s.distribuído], backgroundColor: ['#2e7d32','#e65100','#78909c'], borderWidth: 2 }] },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-  });
+    const s = {
+      disponível:  bags.filter(b => b.status === 'disponível').length,
+      parcial:     bags.filter(b => b.status === 'parcial').length,
+      distribuído: bags.filter(b => b.status === 'distribuído').length
+    };
+    if (charts.sac) charts.sac.destroy();
+    charts.sac = new Chart(document.getElementById('chart-sacolas'), {
+      type: 'doughnut',
+      data: { labels: ['Disponível','Parcial','Distribuído'], datasets: [{ data: [s.disponível, s.parcial, s.distribuído], backgroundColor: ['#2e7d32','#e65100','#78909c'], borderWidth: 2 }] },
+      options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    });
+  } else {
+    console.warn('[Chart.js] Biblioteca não carregada — gráficos desabilitados.');
+  }
 
   const acts   = document.getElementById('activity-list');
   const recent = d.audit.slice(0, 8);
@@ -1149,4 +1190,210 @@ function showBagDetail(id) {
     <div class="stat-row"><span class="stat-label">Status</span><span class="stat-val">${getBagStatusBadge(bag.status)}</span></div>
     ${bagDists.length ? `<div style="margin-top:16px"><div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">Distribuições desta caixa</div>
       ${bagDists.map(di => `<div style="padding:8px;background:#f8f9ff;border-radius:8px;margin-bottom:6px;font-size:12px"><strong>${di.qty} lacres</strong> → ${di.recipient} / ${di.sector} · ${fmtDate(di.date)} <span class="badge ${di.status==='ativo'?'badge-info':'badge-muted'}" style="margin-left:6px">${di.status}</span></div>`).join('')}</div>` : ''}`;
-  openModal('modal
+  openModal('modal-bag-detail');
+}
+
+// ============================================================
+//  HISTÓRICO
+// ============================================================
+function renderHistTable() {
+  const d   = getData();
+  const q   = (document.getElementById('search-hist').value || '').toLowerCase();
+  const act = document.getElementById('filter-hist-action').value;
+  const rows = d.audit.filter(a =>
+    (!act || a.action === act) &&
+    (!q   || a.user.toLowerCase().includes(q) || a.action.toLowerCase().includes(q) || JSON.stringify(a.details).toLowerCase().includes(q))
+  );
+  const tbody = document.getElementById('hist-tbody');
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📋</div><p>Nenhuma movimentação encontrada.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(a => {
+    const det = a.details || {};
+    let detStr = '';
+    if (a.action === 'ENTRADA')      detStr = `Caixa ${det.bagNumber || '-'} · Lacres ${det.sealStart||''}-${det.sealEnd||''}`;
+    else if (a.action === 'DISTRIBUIÇÃO') detStr = `${det.qty||''} lacres → ${det.recipient||''} (${det.sector||''})`;
+    else if (a.action === 'DEVOLUÇÃO')   detStr = `${det.qty||''} lacres devolvidos de ${det.recipient||''}`;
+    else detStr = JSON.stringify(det);
+    return `<tr>
+      <td style="white-space:nowrap">${fmtDT(a.ts)}</td>
+      <td><strong>${a.action}</strong></td>
+      <td>${a.user}</td>
+      <td>${a.profile === 'lp' ? '🛡️ LP' : '📦 Insumos'}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${detStr}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+//  RELATÓRIOS
+// ============================================================
+function renderRelatorios() {
+  const d     = getData();
+  const dists = d.distributions;
+  const bags  = d.bags;
+
+  // Resumo por setor
+  const sectorMap = {};
+  dists.forEach(di => { sectorMap[di.sector] = (sectorMap[di.sector] || 0) + di.qty; });
+  const sortedSectors = Object.entries(sectorMap).sort((a, b) => b[1] - a[1]);
+  const relSetores = document.getElementById('rel-setores');
+  if (sortedSectors.length === 0) {
+    relSetores.innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:16px 0">Nenhuma distribuição registrada.</p>';
+  } else {
+    const total = sortedSectors.reduce((s, [, v]) => s + v, 0);
+    relSetores.innerHTML = sortedSectors.map(([sec, qty]) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <span style="font-weight:600">${sec}</span>
+        <span>${qty} lacres (${Math.round(qty/total*100)}%)</span>
+      </div>`).join('');
+  }
+
+  // Consumo por caixa
+  const bagConsMap = {};
+  dists.forEach(di => { bagConsMap[di.bagNumber] = (bagConsMap[di.bagNumber] || 0) + di.qty; });
+  const sortedBags = Object.entries(bagConsMap).sort((a, b) => b[1] - a[1]);
+  const relSacolas = document.getElementById('rel-sacolas');
+  if (sortedBags.length === 0) {
+    relSacolas.innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:16px 0">Nenhuma distribuição registrada.</p>';
+  } else {
+    relSacolas.innerHTML = sortedBags.map(([num, qty]) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <span style="font-weight:600">Caixa ${num}</span>
+        <span>${qty} lacres distribuídos</span>
+      </div>`).join('');
+  }
+
+  // Resumo geral
+  const totalLacresRecebidos    = bags.length * 100;
+  const totalLacresDistribuidos = dists.reduce((s, di) => s + di.qty, 0);
+  const totalDisponivel         = bags.reduce((s, b) => s + b.available, 0);
+  const ativos                  = dists.filter(di => di.status === 'ativo').length;
+  const devolvidos              = dists.filter(di => di.status === 'devolvido').length;
+  document.getElementById('rel-geral').innerHTML = `
+    <div class="stat-row"><span class="stat-label">Total de Lacres Recebidos</span><span class="stat-val">${totalLacresRecebidos.toLocaleString('pt-BR')}</span></div>
+    <div class="stat-row"><span class="stat-label">Total Distribuídos</span><span class="stat-val">${totalLacresDistribuidos.toLocaleString('pt-BR')}</span></div>
+    <div class="stat-row"><span class="stat-label">Total Disponível em Estoque</span><span class="stat-val">${totalDisponivel.toLocaleString('pt-BR')}</span></div>
+    <div class="stat-row"><span class="stat-label">Distribuições Ativas</span><span class="stat-val">${ativos}</span></div>
+    <div class="stat-row"><span class="stat-label">Devoluções Registradas</span><span class="stat-val">${devolvidos}</span></div>
+    <div class="stat-row"><span class="stat-label">Total de Caixas Cadastradas</span><span class="stat-val">${bags.length}</span></div>`;
+}
+
+// ============================================================
+//  CONFIGURAÇÕES
+// ============================================================
+function renderConfig() {
+  const d = getData();
+  document.getElementById('cfg-min-stock').value = d.config.minStock || 200;
+  const secList = document.getElementById('sectors-list');
+  secList.innerHTML = (d.config.sectors || []).map(s => `
+    <div style="display:flex;align-items:center;gap:6px;background:#f0f4ff;padding:6px 12px;border-radius:20px;font-size:13px">
+      <span>${s}</span>
+      <button onclick="removeSector('${s}')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;line-height:1;padding:0">×</button>
+    </div>`).join('');
+  document.getElementById('cfg-current-pin').value = '';
+  document.getElementById('cfg-new-pin').value     = '';
+  document.getElementById('cfg-confirm-pin').value = '';
+  document.getElementById('pin-feedback').style.display = 'none';
+}
+
+async function savePin() {
+  const current  = document.getElementById('cfg-current-pin').value.trim();
+  const novo     = document.getElementById('cfg-new-pin').value.trim();
+  const confirma = document.getElementById('cfg-confirm-pin').value.trim();
+  const fb       = document.getElementById('pin-feedback');
+  fb.style.display = 'none';
+
+  if (!current || !novo || !confirma) { fb.textContent = '⚠ Preencha todos os campos.'; fb.style.color = 'var(--danger)'; fb.style.display = 'block'; return; }
+  if (novo !== confirma) { fb.textContent = '⚠ O novo PIN e a confirmação não coincidem.'; fb.style.color = 'var(--danger)'; fb.style.display = 'block'; return; }
+  if (novo.length < 4)   { fb.textContent = '⚠ O PIN deve ter pelo menos 4 dígitos.'; fb.style.color = 'var(--danger)'; fb.style.display = 'block'; return; }
+
+  try {
+    await api('changePin', { currentPin: current, newPin: novo });
+    fb.textContent = '✅ PIN alterado com sucesso!';
+    fb.style.color = 'var(--success)';
+    fb.style.display = 'block';
+    document.getElementById('cfg-current-pin').value = '';
+    document.getElementById('cfg-new-pin').value     = '';
+    document.getElementById('cfg-confirm-pin').value = '';
+    addAudit('CONFIG', { change: 'PIN alterado' });
+    showToast('✅ PIN alterado!');
+  } catch (err) {
+    fb.textContent = '❌ ' + err.message;
+    fb.style.color = 'var(--danger)';
+    fb.style.display = 'block';
+  }
+}
+
+async function saveConfig() {
+  const minStock = parseInt(document.getElementById('cfg-min-stock').value) || 200;
+  const d = getData();
+  const sectors = d.config.sectors || [];
+  try {
+    await api('saveConfig', { minStock, sectors });
+    if (appData) appData.config.minStock = minStock;
+    addAudit('CONFIG', { change: 'Configurações salvas', minStock });
+    showToast('✅ Configurações salvas!');
+  } catch (err) {
+    showToast('❌ Erro ao salvar: ' + err.message);
+  }
+}
+
+async function addSector() {
+  const input  = document.getElementById('cfg-new-sector');
+  const name   = input.value.trim();
+  if (!name) return;
+  const d = getData();
+  if (d.config.sectors.includes(name)) { showToast('⚠️ Setor já existe.'); return; }
+  const newSectors = [...d.config.sectors, name];
+  try {
+    await api('saveConfig', { minStock: d.config.minStock, sectors: newSectors });
+    if (appData) appData.config.sectors = newSectors;
+    input.value = '';
+    renderConfig();
+    showToast('✅ Setor adicionado!');
+  } catch (err) {
+    showToast('❌ Erro: ' + err.message);
+  }
+}
+
+async function removeSector(name) {
+  if (!confirm(`Remover o setor "${name}"?`)) return;
+  const d = getData();
+  const newSectors = d.config.sectors.filter(s => s !== name);
+  try {
+    await api('saveConfig', { minStock: d.config.minStock, sectors: newSectors });
+    if (appData) appData.config.sectors = newSectors;
+    renderConfig();
+    showToast('✅ Setor removido.');
+  } catch (err) {
+    showToast('❌ Erro: ' + err.message);
+  }
+}
+
+// ============================================================
+//  EXPORTAR CSV
+// ============================================================
+function exportCSV() {
+  const d    = getData();
+  const rows = [
+    ['Data', 'Caixa', 'Lacre Inicial', 'Lacre Final', 'Qtd', 'Colaborador', 'Setor', 'Distribuído por', 'Status'],
+    ...d.distributions.map(di => [
+      fmtDate(di.date), di.bagNumber, di.sealStart, di.sealEnd,
+      di.qty, di.recipient, di.sector, di.distributedBy, di.status
+    ])
+  ];
+  const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `lacres_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+</script>
+</body>
+</html>
