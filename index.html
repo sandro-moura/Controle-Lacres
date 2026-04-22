@@ -528,7 +528,7 @@
 // ============================================================
 //  ⚙️  CONFIGURAÇÃO — cole aqui a URL do seu Apps Script
 // ============================================================
-const API_URL = 'https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec';
+const API_URL = https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec;
 
 // ============================================================
 //  ESTADO GLOBAL
@@ -578,7 +578,7 @@ function getData() {
 //  INIT — verifica se API_URL foi configurada
 // ============================================================
 window.addEventListener('load', () => {
-  if (!API_URL || API_URL === 'https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec') {
+  if (!API_URL || API_URL === https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec) {
     hideLoading();
     document.getElementById('login-screen').style.display = 'flex';
     showToast('⚠️ Configure a constante API_URL no código antes de usar.');
@@ -606,9 +606,9 @@ async function testarConexao() {
   box.innerHTML = '⏳ Testando conexão com o servidor...';
 
   // 1. URL configurada?
-  if (!API_URL || API_URL === 'https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec') {
+  if (!API_URL || API_URL === https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec) {
     box.style.background = '#fff0f1'; box.style.borderColor = '#f23d4f';
-    box.innerHTML = '❌ <strong>API_URL não configurada.</strong><br>Abra o index.html, localize a linha <code>const API_URL = \'https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec\';</code> e substitua pelo URL do seu Web App.';
+    box.innerHTML = '❌ <strong>API_URL não configurada.</strong><br>Abra o index.html, localize a linha <code>const API_URL = \https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec\;</code> e substitua pelo URL do seu Web App.';
     return;
   }
 
@@ -674,7 +674,7 @@ async function doLogin() {
   if (!name) { errEl.textContent = '⚠ Informe seu nome.'; errEl.style.display = 'block'; return; }
   if (selectedProfile === 'lp' && !pin) { errEl.textContent = '⚠ Informe o PIN.'; errEl.style.display = 'block'; return; }
 
-  if (!API_URL || API_URL === 'https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec') {
+  if (!API_URL || API_URL === https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec) {
     errEl.textContent = '⚠ API_URL não configurada no arquivo HTML. Use o botão "Testar conexão" para orientação.';
     errEl.style.display = 'block'; return;
   }
