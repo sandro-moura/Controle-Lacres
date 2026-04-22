@@ -524,7 +524,7 @@
 // ============================================================
 //  ⚙️  CONFIGURAÇÃO — cole aqui a URL do seu Apps Script
 // ============================================================
-const API_URL = https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec;
+const API_URL = 'https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec';
 
 // ============================================================
 //  ESTADO GLOBAL
@@ -582,7 +582,7 @@ function getData() {
 //  INIT — verifica se API_URL foi configurada
 // ============================================================
 window.addEventListener('load', () => {
-  if (!API_URL || API_URL === https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec ) {
+  if (!API_URL || API_URL === 'https://script.google.com/a/macros/mercadolivre.com/s/AKfycbzyfOYVJQ3lvHIuR6nFAHlVqR45bN5J62yXwviIMszpa0bgm1W5IdWSSPe6ArOepBBv/exec' ) {
     hideLoading();
     document.getElementById('login-screen').style.display = 'flex';
     showToast('⚠️ Configure a constante API_URL no código antes de usar.');
